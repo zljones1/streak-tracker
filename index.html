@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Streak Tracker</title>
+<style>
+  :root {
+    --green: #58cc02;
+    --green-dark: #46a302;
+    --yellow: #ffc800;
+    --orange: #ff9600;
+    --red: #ff4b4b;
+    --bg: #131f24;
+    --card: #1b2b32;
+    --card-border: #2b3d45;
+    --text: #e5e5e5;
+    --muted: #9aa0a6;
+    --flame: #ff6b00;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    padding: 20px;
+  }
+  .container { width: 100%; max-width: 420px; }
+  header { text-align: center; margin-bottom: 24px; }
+  header h1 { font-size: 1.4rem; font-weight: 700; letter-spacing: -0.5px; }
+  header p { color: var(--muted); font-size: 0.85rem; margin-top: 4px; }
+  .streak-hero {
+    background: linear-gradient(145deg, #1e3a2f, #142820);
+    border: 1px solid var(--card-border);
+    border-radius: 20px;
+    padding: 28px 20px;
+    text-align: center;
+    margin-bottom: 16px;
+    position: relative;
+    overflow: hidden;
+  }
+  .streak-hero::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at 50% 0%, rgba(88,204,2,0.15), transparent 60%);
+    pointer-events: none;
+  }
+  .flame {
+    font-size: 4.5rem;
+    line-height: 1;
+    filter: drop-shadow(0 4px 12px rgba(255,107,0,0.6));
+    animation: flicker 1.8s ease-in-out infinite;
+    margin-bottom: 4px;
+  }
+  @keyframes flicker {
+    0%, 100% { transform: scale(1) rotate(-2deg); }
+    50% { transform: scale(1.08) rotate(2deg); }
+  }
+  .streak-number {
+    font-size: 4.2rem;
+    font-weight: 800;
+    letter-spacing: -2px;
+    line-height: 1;
+    background: linear-gradient(180deg, #fff, #ffd27a);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .streak-label { font-size: 1.1rem; font-weight: 600; color: var(--green); margin-top: 2px; }
+  .longest { margin-top: 12px; font-size: 0.85rem; color: var(--muted); }
+  .longest strong { color: var(--yellow); }
+  .gems-display { margin-top: 10px; font-size: 1rem; font-weight: 700; color: #7ec8ff; }
+  .gems-display span { color: #fff; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: 16px;
+    padding: 16px;
+    margin-bottom: 12px;
+  }
+  .card h2 { font-size: 0.95rem; font-weight: 600; margin-bottom: 12px; }
+  .calendar { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+  .day-header { text-align: center; font-size: 0.7rem; color: var(--muted); font-weight: 600; padding-bottom: 4px; }
+  .day {
+    aspect-ratio: 1;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 600;
+    background: #24343c;
+    color: var(--muted);
+    transition: all 0.15s;
+  }
+  .day.today { outline: 2px solid var(--green); outline-offset: -2px; }
+  .day.done { background: var(--green); color: #0d1f12; }
+  .day.freeze { background: #3a5a7a; color: #a8d4ff; }
+  .day.missed { background: #3a2a2a; color: #ff8a8a; }
+  .day.empty { background: transparent; }
+  .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  button {
+    border: none;
+    border-radius: 14px;
+    padding: 14px 12px;
+    font-size: 0.95rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.1s, filter 0.1s;
+  }
+  button:active { transform: scale(0.97); }
+  .btn-practice { background: var(--green); color: #0d1f12; }
+  .btn-practice:hover { filter: brightness(1.1); }
+  .btn-practice:disabled { background: #2a3a30; color: #6a7a70; cursor: not-allowed; }
+  .btn-freeze { background: #2a4a6a; color: #c8e0ff; }
+  .btn-freeze:hover { filter: brightness(1.15); }
+  .btn-freeze:disabled { background: #1e2e3e; color: #5a6a7a; cursor: not-allowed; }
+  .stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; text-align: center; }
+  .stat-value { font-size: 1.4rem; font-weight: 800; color: var(--yellow); }
+  .stat-label { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px; }
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    background: #2a3a30;
+    border: 1px solid var(--green);
+    color: #fff;
+    padding: 12px 20px;
+    border-radius: 12px;
+    font-weight: 600;
+    opacity: 0;
+    transition: all 0.3s;
+    pointer-events: none;
+    z-index: 100;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+  .freezes-left { text-align: center; font-size: 0.8rem; color: var(--muted); margin-top: 8px; }
+  .freezes-left strong { color: #7ec8ff; }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>🔥 Daily Streak</h1>
+    <p>Practice every day to keep it going</p>
+  </header>
+  <div class="streak-hero">
+    <div class="flame">🔥</div>
+    <div class="streak-number" id="streakNum">0</div>
+    <div class="streak-label" id="streakLabel">day streak</div>
+    <div class="longest">Longest streak: <strong id="longestNum">0</strong> days</div>
+    <div class="gems-display">💎 <span id="gemsNum">0</span> gems</div>
+  </div>
+  <div class="card">
+    <h2>📅 This Month</h2>
+    <div class="calendar" id="calendar"></div>
+  </div>
+  <div class="card">
+    <div class="stats">
+      <div>
+        <div class="stat-value" id="statDays">0</div>
+        <div class="stat-label">Days practiced</div>
+      </div>
+      <div>
+        <div class="stat-value" id="statFreezes">2</div>
+        <div class="stat-label">Freezes left</div>
+      </div>
+      <div>
+        <div class="stat-value" id="statPerfect">0</div>
+        <div class="stat-label">Perfect weeks</div>
+      </div>
+    </div>
+  </div>
+  <div class="actions">
+    <button class="btn-practice" id="practiceBtn" onclick="practiceToday()">Practice Today</button>
+    <button class="btn-freeze" id="freezeBtn" onclick="useFreeze()">Use Freeze</button>
+  </div>
+  <div class="freezes-left">You have <strong id="freezeCount">2</strong> streak freezes remaining this month</div>
+</div>
+<div class="toast" id="toast"></div>
+<script>
+const STORAGE_KEY = "duolingo-like-streak-v1";
+function todayKey() {
+  const d = new Date();
+  return d.toISOString().slice(0, 10);
+}
+function dateKey(date) {
+  return date.toISOString().slice(0, 10);
+}
+function load() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch (e) {}
+  return {
+    practiced: {},
+    currentStreak: 0,
+    longestStreak: 0,
+    freezesLeft: 2,
+    freezesMonth: new Date().getMonth(),
+    totalDays: 0,
+    perfectWeeks: 0,
+    gems: 0,
+    lastRewardStreak: 0
+  };
+}
+function save(state) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+let state = load();
+(function checkMonth() {
+  const nowMonth = new Date().getMonth();
+  if (state.freezesMonth !== nowMonth) {
+    state.freezesLeft = 2;
+    state.freezesMonth = nowMonth;
+    save(state);
+  }
+})();
+function calculateStreak() {
+  const practiced = state.practiced;
+  let streak = 0;
+  let d = new Date();
+  d.setHours(0,0,0,0);
+  const today = todayKey();
+  if (!practiced[today] || practiced[today] === "missed") {
+    d.setDate(d.getDate() - 1);
+  }
+  while (true) {
+    const key = dateKey(d);
+    const status = practiced[key];
+    if (status === "done" || status === "freeze") {
+      streak++;
+      d.setDate(d.getDate() - 1);
+    } else {
+      break;
+    }
+  }
+  return streak;
+}
+function recalculate() {
+  const oldStreak = state.currentStreak;
+  state.currentStreak = calculateStreak();
+  if (state.currentStreak > state.longestStreak) {
+    state.longestStreak = state.currentStreak;
+  }
+  state.totalDays = Object.values(state.practiced).filter(v => v === "done").length;
+  const rewardsEarned = Math.floor(state.currentStreak / 5);
+  const previousRewards = Math.floor((state.lastRewardStreak || 0) / 5);
+  if (rewardsEarned > previousRewards) {
+    const newRewards = rewardsEarned - previousRewards;
+    state.gems = (state.gems || 0) + (newRewards * 50);
+    state.lastRewardStreak = state.currentStreak;
+    showToast(`💎 +${newRewards * 50} gems! (every 5 days)`);
+  } else {
+    state.lastRewardStreak = Math.max(state.lastRewardStreak || 0, state.currentStreak);
+  }
+  save(state);
+  render();
+}
+function practiceToday() {
+  const key = todayKey();
+  if (state.practiced[key] === "done") {
+    showToast("Already practiced today!");
+    return;
+  }
+  state.practiced[key] = "done";
+  recalculate();
+  showToast("🔥 Streak extended!");
+}
+function useFreeze() {
+  if (state.freezesLeft <= 0) {
+    showToast("No freezes left this month");
+    return;
+  }
+  const key = todayKey();
+  if (state.practiced[key]) {
+    showToast("Today is already marked");
+    return;
+  }
+  state.practiced[key] = "freeze";
+  state.freezesLeft--;
+  recalculate();
+  showToast("❄️ Streak freeze used!");
+}
+function showToast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  setTimeout(() => t.classList.remove("show"), 2200);
+}
+function render() {
+  document.getElementById("streakNum").textContent = state.currentStreak;
+  document.getElementById("streakLabel").textContent = "day streak";
+  document.getElementById("longestNum").textContent = state.longestStreak;
+  document.getElementById("gemsNum").textContent = state.gems || 0;
+  document.getElementById("statDays").textContent = state.totalDays;
+  document.getElementById("statFreezes").textContent = state.freezesLeft;
+  document.getElementById("freezeCount").textContent = state.freezesLeft;
+  document.getElementById("statPerfect").textContent = state.perfectWeeks;
+  const today = todayKey();
+  const already = state.practiced[today] === "done";
+  document.getElementById("practiceBtn").disabled = already;
+  document.getElementById("practiceBtn").textContent = already ? "Practiced ✓" : "Practice Today";
+  document.getElementById("freezeBtn").disabled = state.freezesLeft <= 0 || !!state.practiced[today];
+  renderCalendar();
+}
+function renderCalendar() {
+  const cal = document.getElementById("calendar");
+  cal.innerHTML = "";
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth();
+  const days = ["S","M","T","W","T","F","S"];
+  days.forEach(d => {
+    const el = document.createElement("div");
+    el.className = "day-header";
+    el.textContent = d;
+    cal.appendChild(el);
+  });
+  const first = new Date(year, month, 1);
+  const startOffset = first.getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  for (let i = 0; i < startOffset; i++) {
+    const el = document.createElement("div");
+    el.className = "day empty";
+    cal.appendChild(el);
+  }
+  const todayStr = todayKey();
+  for (let day = 1; day <= daysInMonth; day++) {
+    const date = new Date(year, month, day);
+    const key = dateKey(date);
+    const el = document.createElement("div");
+    el.className = "day";
+    el.textContent = day;
+    const status = state.practiced[key];
+    if (status === "done") el.classList.add("done");
+    else if (status === "freeze") el.classList.add("freeze");
+    else if (key < todayStr) el.classList.add("missed");
+    if (key === todayStr) el.classList.add("today");
+    cal.appendChild(el);
+  }
+}
+recalculate();
+</script>
+</body>
+</html>
