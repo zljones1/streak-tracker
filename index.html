@@ -243,21 +243,19 @@ function calculateStreak() {
   return streak;
 }
 function recalculate() {
-  const oldStreak = state.currentStreak;
   state.currentStreak = calculateStreak();
   if (state.currentStreak > state.longestStreak) {
     state.longestStreak = state.currentStreak;
   }
   state.totalDays = Object.values(state.practiced).filter(v => v === "done").length;
-  const rewardsEarned = Math.floor(state.currentStreak / 5);
-  const previousRewards = Math.floor((state.lastRewardStreak || 0) / 5);
-  if (rewardsEarned > previousRewards) {
-    const newRewards = rewardsEarned - previousRewards;
-    state.gems = (state.gems || 0) + (newRewards * 50);
+  // Award +5 gems for every day practiced
+  if (state.currentStreak > (state.lastRewardStreak || 0)) {
+    const daysGained = state.currentStreak - (state.lastRewardStreak || 0);
+    state.gems = (state.gems || 0) + (daysGained * 5);
     state.lastRewardStreak = state.currentStreak;
-    showToast(`💎 +${newRewards * 50} gems! (every 5 days)`);
-  } else {
-    state.lastRewardStreak = Math.max(state.lastRewardStreak || 0, state.currentStreak);
+    if (daysGained > 0) {
+      showToast(`💎 +${daysGained * 5} gems!`);
+    }
   }
   save(state);
   render();
